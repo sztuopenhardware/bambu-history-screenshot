@@ -62,7 +62,8 @@ namespace BambuHistoryScreenshot
                 bool hit = (card.Name != null && card.Name.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0)
                         || (card.Device != null && card.Device.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0)
                         || (card.Plate != null && card.Plate.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0)
-                        || (card.Status != null && card.Status.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0);
+                        || (card.Status != null && card.Status.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0)
+                        || (card.FilamentTypes != null && card.FilamentTypes.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0);
                 if (!hit) return false;
             }
 

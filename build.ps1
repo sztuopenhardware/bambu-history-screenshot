@@ -11,6 +11,8 @@ $sources = @(
     (Join-Path $root "src\Models.cs"),
     (Join-Path $root "src\NativeMethods.cs"),
     (Join-Path $root "src\BambuUiaScanner.cs"),
+    (Join-Path $root "src\BambuCloudClient.cs"),
+    (Join-Path $root "src\CloudLoginForm.cs"),
     (Join-Path $root "src\ScreenshotCapturer.cs"),
     (Join-Path $root "src\ExcelExporter.cs"),
     (Join-Path $root "src\MainForm.cs")
@@ -27,6 +29,8 @@ $argsList = @(
     "/r:$fw\System.Core.dll",
     "/r:$fw\System.Drawing.dll",
     "/r:$fw\System.IO.Compression.dll",
+    "/r:$fw\System.Net.Http.dll",
+    "/r:$fw\System.Web.Extensions.dll",
     "/r:$fw\System.Windows.Forms.dll",
     "/r:$wpf\WindowsBase.dll",
     "/r:$wpf\UIAutomationClient.dll",

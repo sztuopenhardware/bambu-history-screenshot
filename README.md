@@ -12,7 +12,8 @@
   - **扫描当前页 → 截取勾选卡片**：先预览识别结果与目标文件名，按需勾选后一键截图。
   - **自动滚动批量截图**：自动隐藏本工具并前置 Bambu Studio，逐屏去重截图并自动向下/向右滚动（按 **ESC** 或点击悬浮条可随时停止）。
 - **多维度筛选**：支持按打印状态（打印完成 / 正在打印 / 已取消）、日期范围、关键词筛选；支持自定义外边距（默认 `10 px`）及重名策略（自动加序号 / 跳过已存在 / 覆盖）。
-- **导出 Excel（`.xlsx`）**：一键导出标准 Excel 工作簿（兼容 Microsoft Excel / WPS / LibreOffice），第 1 列为 **日期**、第 2 列为 **名字**、第 3 列为 **打印状态**（带颜色标注）、第 4 列为 **内嵌高清截图**（自动排版行高列宽，无需外部图片链接）。
+- **云端耗材同步（国区 / 国际区）**：内置拓竹云端登录（下拉选择 **中国大陆 `api.bambulab.cn`（默认）** 或 **国际区 `api.bambulab.com`**，支持 **手机短信验证码登录**、账号密码登录（含邮箱/短信二次校验与 2FA）及 Token 备用登录），自动拉取每次打印的 **耗材种类（如 `PLA`、`PLA / PETG`）** 与 **耗材重量（g）**，并智能匹配本地卡片与已有截图。
+- **导出 Excel（`.xlsx`）**：一键导出标准 Excel 工作簿（兼容 Microsoft Excel / WPS / LibreOffice），6 列依次为 **日期 | 名字 | 打印状态 | 耗材种类 | 耗材重量(g) | 截图**，内嵌高清 PNG 截图、自动计算耗材重量合计（`=SUM(...)`）并冻结首行表头。
 - **单文件便携运行**：纯 C#（.NET Framework 4.x）编写，Windows 10/11 双击 `BambuHistoryScreenshot.exe` 即可运行，无需安装 Python 或额外运行库。
 
 ---
@@ -61,8 +62,10 @@ bambu-history-screenshot/
 │   ├── Program.cs              # 入口与高 DPI（Per-Monitor V2）适配
 │   ├── NativeMethods.cs        # Win32 窗口定位、前置、WebView2 唤醒与滚轮控制
 │   ├── BambuUiaScanner.cs      # 三级卡片识别（DOM 容器 / 图像锚点 / 视觉边框）与字段解析
+│   ├── BambuCloudClient.cs     # 拓竹云端打印历史客户端（国区/国际区登录、耗材种类与克重解析）
+│   ├── CloudLoginForm.cs       # 云端账号登录窗口（区域下拉、验证码/2FA/Token 备用）
 │   ├── ScreenshotCapturer.cs   # 屏幕捕获、边距裁剪与视觉灰框精定位
-│   ├── ExcelExporter.cs        # 零依赖标准 .xlsx 导出（含内嵌 PNG 截图与自动排版）
+│   ├── ExcelExporter.cs        # 零依赖标准 .xlsx 导出（6列排版、耗材合计与内嵌 PNG 截图）
 │   ├── Models.cs               # 数据模型、配置持久化、命名模板与重名策略
 │   └── MainForm.cs             # WinForms 主界面、实时预览与自动滚动调度
 ├── build.ps1                   # Windows 零依赖一键编译脚本

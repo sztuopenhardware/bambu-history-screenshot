@@ -30,6 +30,12 @@ namespace BambuHistoryScreenshot
         public string Device { get; set; }
         public string Plate { get; set; }
         public string Status { get; set; }
+        public string FilamentTypes { get; set; }
+        public string FilamentDetail { get; set; }
+        public double FilamentWeightGrams { get; set; }
+        public bool HasFilamentWeight { get; set; }
+        public long CloudTaskId { get; set; }
+        public string CoverImageUrl { get; set; }
         public Rectangle Bounds { get; set; }
         public Rectangle ImageBounds { get; set; }
         public bool NeedsVisualTopRefinement { get; set; }
@@ -47,10 +53,19 @@ namespace BambuHistoryScreenshot
             Device = string.Empty;
             Plate = string.Empty;
             Status = string.Empty;
+            FilamentTypes = string.Empty;
+            FilamentDetail = string.Empty;
+            CoverImageUrl = string.Empty;
             SavedFilePath = string.Empty;
             CaptureState = "待截图";
             DetectionTier = string.Empty;
             IsSelected = true;
+        }
+
+        public string FormatFilamentWeight()
+        {
+            if (!HasFilamentWeight) return string.Empty;
+            return FilamentWeightGrams.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         public string BuildUniqueKey()
@@ -106,6 +121,8 @@ namespace BambuHistoryScreenshot
         public ScrollDirectionMode ScrollMode { get; set; }
         public int ScrollDelayMs { get; set; }
         public int MaxAutoScrollCards { get; set; }
+        public string CloudRegion { get; set; }
+        public string CloudAccount { get; set; }
 
         public AppConfig()
         {
@@ -116,6 +133,8 @@ namespace BambuHistoryScreenshot
             ScrollMode = ScrollDirectionMode.Auto;
             ScrollDelayMs = 650;
             MaxAutoScrollCards = 200;
+            CloudRegion = "cn";
+            CloudAccount = string.Empty;
         }
 
         private static string GetConfigPath()
@@ -174,6 +193,13 @@ namespace BambuHistoryScreenshot
                             if (int.TryParse(val, out intVal) && intVal >= 1 && intVal <= 5000)
                                 cfg.MaxAutoScrollCards = intVal;
                             break;
+                        case "CloudRegion":
+                            if (val == "cn" || val == "global")
+                                cfg.CloudRegion = val;
+                            break;
+                        case "CloudAccount":
+                            cfg.CloudAccount = val;
+                            break;
                     }
                 }
             }
@@ -198,6 +224,8 @@ namespace BambuHistoryScreenshot
                 sb.AppendLine("ScrollMode=" + ((int)ScrollMode).ToString());
                 sb.AppendLine("ScrollDelayMs=" + ScrollDelayMs.ToString());
                 sb.AppendLine("MaxAutoScrollCards=" + MaxAutoScrollCards.ToString());
+                sb.AppendLine("CloudRegion=" + (CloudRegion ?? "cn"));
+                sb.AppendLine("CloudAccount=" + (CloudAccount ?? string.Empty));
                 File.WriteAllText(GetConfigPath(), sb.ToString(), Encoding.UTF8);
             }
             catch
@@ -236,6 +264,8 @@ namespace BambuHistoryScreenshot
             string safeDevice = SanitizePart(card.Device ?? string.Empty);
             string safeStatus = SanitizePart(card.Status ?? string.Empty);
             string safeDuration = SanitizePart(card.Duration ?? string.Empty);
+            string safeFilament = SanitizePart(card.FilamentTypes ?? string.Empty);
+            string safeWeight = card.HasFilamentWeight ? (card.FormatFilamentWeight() + "g") : string.Empty;
 
             string result = template
                 .Replace("{date}", dateStr)
@@ -246,7 +276,9 @@ namespace BambuHistoryScreenshot
                 .Replace("{plate}", safePlate)
                 .Replace("{device}", safeDevice)
                 .Replace("{status}", safeStatus)
-                .Replace("{duration}", safeDuration);
+                .Replace("{duration}", safeDuration)
+                .Replace("{filament}", safeFilament)
+                .Replace("{weight}", safeWeight);
 
             result = SanitizeFileName(result);
             if (string.IsNullOrWhiteSpace(result))

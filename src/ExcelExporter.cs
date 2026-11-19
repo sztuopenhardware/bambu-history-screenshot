@@ -323,20 +323,22 @@ namespace BambuHistoryScreenshot
             sb.Append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>");
             sb.Append("<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">");
 
-            // Fonts: 0=default, 1=header white bold, 2=green bold, 3=orange bold, 4=red bold
-            sb.Append("<fonts count=\"5\">");
+            // Fonts: 0=default, 1=header white bold, 2=green bold, 3=orange bold, 4=red bold, 5=dark bold (summary)
+            sb.Append("<fonts count=\"6\">");
             sb.Append("<font><sz val=\"10\"/><color rgb=\"FF1F2937\"/><name val=\"Microsoft YaHei\"/></font>");
             sb.Append("<font><b/><sz val=\"11\"/><color rgb=\"FFFFFFFF\"/><name val=\"Microsoft YaHei\"/></font>");
             sb.Append("<font><b/><sz val=\"10\"/><color rgb=\"FF00AE42\"/><name val=\"Microsoft YaHei\"/></font>");
             sb.Append("<font><b/><sz val=\"10\"/><color rgb=\"FFFF6F00\"/><name val=\"Microsoft YaHei\"/></font>");
             sb.Append("<font><b/><sz val=\"10\"/><color rgb=\"FFD01B1B\"/><name val=\"Microsoft YaHei\"/></font>");
+            sb.Append("<font><b/><sz val=\"10\"/><color rgb=\"FF111827\"/><name val=\"Microsoft YaHei\"/></font>");
             sb.Append("</fonts>");
 
-            // Fills: 0=none, 1=gray125 (required by Excel), 2=Bambu green header
-            sb.Append("<fills count=\"3\">");
+            // Fills: 0=none, 1=gray125 (required by Excel), 2=Bambu green header, 3=soft green-gray summary row
+            sb.Append("<fills count=\"4\">");
             sb.Append("<fill><patternFill patternType=\"none\"/></fill>");
             sb.Append("<fill><patternFill patternType=\"gray125\"/></fill>");
             sb.Append("<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF00AE42\"/><bgColor indexed=\"64\"/></patternFill></fill>");
+            sb.Append("<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFF0FDF4\"/><bgColor indexed=\"64\"/></patternFill></fill>");
             sb.Append("</fills>");
 
             // Borders: 0=none, 1=thin light gray
@@ -359,11 +361,14 @@ namespace BambuHistoryScreenshot
             // 0 = default
             // 1 = header (white bold on Bambu green, centered)
             // 2 = name text (left, v-center, wrap)
-            // 3 = centered cell (date / default status / screenshot cell)
+            // 3 = centered cell (date / default status / filament type / screenshot cell)
             // 4 = status success (green bold, centered)
             // 5 = status printing (orange bold, centered)
             // 6 = status canceled/failed (red bold, centered)
-            sb.Append("<cellXfs count=\"7\">");
+            // 7 = numeric weight (0.00, centered)
+            // 8 = summary text (bold, soft tint, centered)
+            // 9 = summary numeric weight (bold, 0.00, soft tint, centered)
+            sb.Append("<cellXfs count=\"10\">");
             sb.Append("<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/>");
             sb.Append("<xf numFmtId=\"0\" fontId=\"1\" fillId=\"2\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\"/></xf>");
             sb.Append("<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" vertical=\"center\" wrapText=\"1\"/></xf>");
@@ -371,6 +376,9 @@ namespace BambuHistoryScreenshot
             sb.Append("<xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\"/></xf>");
             sb.Append("<xf numFmtId=\"0\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\"/></xf>");
             sb.Append("<xf numFmtId=\"0\" fontId=\"4\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\"/></xf>");
+            sb.Append("<xf numFmtId=\"2\" fontId=\"0\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\"/></xf>");
+            sb.Append("<xf numFmtId=\"0\" fontId=\"5\" fillId=\"3\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\"/></xf>");
+            sb.Append("<xf numFmtId=\"2\" fontId=\"5\" fillId=\"3\" borderId=\"1\" xfId=\"0\" applyNumberFormat=\"1\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" vertical=\"center\"/></xf>");
             sb.Append("</cellXfs>");
 
             sb.Append("<cellStyles count=\"1\">");
@@ -395,12 +403,14 @@ namespace BambuHistoryScreenshot
 
             sb.Append("<sheetFormatPr defaultRowHeight=\"24\"/>");
 
-            // Column widths: Col 1=日期, Col 2=名字, Col 3=打印状态, Col 4=截图
+            // Column widths: Col 1=日期, Col 2=名字, Col 3=打印状态, Col 4=耗材种类, Col 5=耗材重量(g), Col 6=截图
             sb.Append("<cols>");
-            sb.Append("<col min=\"1\" max=\"1\" width=\"21\" customWidth=\"1\"/>");
-            sb.Append("<col min=\"2\" max=\"2\" width=\"36\" customWidth=\"1\"/>");
-            sb.Append("<col min=\"3\" max=\"3\" width=\"14\" customWidth=\"1\"/>");
-            sb.Append("<col min=\"4\" max=\"4\" width=\"28\" customWidth=\"1\"/>");
+            sb.Append("<col min=\"1\" max=\"1\" width=\"20\" customWidth=\"1\"/>");
+            sb.Append("<col min=\"2\" max=\"2\" width=\"34\" customWidth=\"1\"/>");
+            sb.Append("<col min=\"3\" max=\"3\" width=\"13\" customWidth=\"1\"/>");
+            sb.Append("<col min=\"4\" max=\"4\" width=\"18\" customWidth=\"1\"/>");
+            sb.Append("<col min=\"5\" max=\"5\" width=\"14\" customWidth=\"1\"/>");
+            sb.Append("<col min=\"6\" max=\"6\" width=\"28\" customWidth=\"1\"/>");
             sb.Append("</cols>");
 
             sb.Append("<sheetData>");
@@ -411,8 +421,13 @@ namespace BambuHistoryScreenshot
             AppendInlineStringCell(sb, "A1", "日期", 1);
             AppendInlineStringCell(sb, "B1", "名字", 1);
             AppendInlineStringCell(sb, "C1", "打印状态", 1);
-            AppendInlineStringCell(sb, "D1", "截图", 1);
+            AppendInlineStringCell(sb, "D1", "耗材种类", 1);
+            AppendInlineStringCell(sb, "E1", "耗材重量(g)", 1);
+            AppendInlineStringCell(sb, "F1", "截图", 1);
             sb.Append("</row>");
+
+            bool anyWeight = false;
+            double totalWeightGrams = 0;
 
             // Data rows
             for (int i = 0; i < cards.Count; i++)
@@ -427,13 +442,45 @@ namespace BambuHistoryScreenshot
                 string dateText = c.FormatDisplayDate();
                 string nameText = c.Name ?? string.Empty;
                 string statusText = c.Status ?? string.Empty;
+                string filamentText = c.FilamentTypes ?? string.Empty;
                 int statusStyle = GetStatusStyleIndex(statusText);
 
                 AppendInlineStringCell(sb, "A" + r, dateText, 3);
                 AppendInlineStringCell(sb, "B" + r, nameText, 2);
                 AppendInlineStringCell(sb, "C" + r, statusText, statusStyle);
-                AppendInlineStringCell(sb, "D" + r, rowHasImage[i] ? string.Empty : "（未截图）", 3);
+                AppendInlineStringCell(sb, "D" + r, filamentText, 3);
 
+                if (c.HasFilamentWeight)
+                {
+                    anyWeight = true;
+                    totalWeightGrams += c.FilamentWeightGrams;
+                    AppendNumberCell(sb, "E" + r, c.FilamentWeightGrams, 7);
+                }
+                else
+                {
+                    AppendInlineStringCell(sb, "E" + r, string.Empty, 3);
+                }
+
+                AppendInlineStringCell(sb, "F" + r, rowHasImage[i] ? string.Empty : "（未截图）", 3);
+
+                sb.Append("</row>");
+            }
+
+            // Summary row at the bottom when filament weights are present
+            if (anyWeight && cards.Count > 0)
+            {
+                int sumRow = cards.Count + 2;
+                int lastDataRow = cards.Count + 1;
+                sb.AppendFormat(CultureInfo.InvariantCulture,
+                    "<row r=\"{0}\" ht=\"26\" customHeight=\"1\">", sumRow);
+                AppendInlineStringCell(sb, "A" + sumRow, "合计", 8);
+                AppendInlineStringCell(sb, "B" + sumRow, string.Format("共 {0} 条记录", cards.Count), 8);
+                AppendInlineStringCell(sb, "C" + sumRow, string.Empty, 8);
+                AppendInlineStringCell(sb, "D" + sumRow, string.Empty, 8);
+                sb.AppendFormat(CultureInfo.InvariantCulture,
+                    "<c r=\"E{0}\" s=\"9\"><f>SUM(E2:E{1})</f><v>{2:0.##}</v></c>",
+                    sumRow, lastDataRow, Math.Round(totalWeightGrams, 2));
+                AppendInlineStringCell(sb, "F" + sumRow, string.Empty, 8);
                 sb.Append("</row>");
             }
 
@@ -474,6 +521,13 @@ namespace BambuHistoryScreenshot
                 cellRef, styleIndex, safe);
         }
 
+        private static void AppendNumberCell(StringBuilder sb, string cellRef, double val, int styleIndex)
+        {
+            sb.AppendFormat(CultureInfo.InvariantCulture,
+                "<c r=\"{0}\" s=\"{1}\"><v>{2:0.##}</v></c>",
+                cellRef, styleIndex, Math.Round(val, 2));
+        }
+
         private static string BuildSheetRelsXml()
         {
             return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
@@ -497,11 +551,11 @@ namespace BambuHistoryScreenshot
                 long toColOff = img.ColOffsetEmu + img.WidthEmu;
                 long toRowOff = img.RowOffsetEmu + img.HeightEmu;
 
-                // Two-cell anchor strictly inside Column D (col=3) of the item's row so it moves with the cell and preserves aspect ratio
+                // Two-cell anchor strictly inside Column F (col=5, 截图) of the item's row so it moves with the cell and preserves aspect ratio
                 sb.Append("<xdr:twoCellAnchor editAs=\"oneCell\">");
-                sb.AppendFormat("<xdr:from><xdr:col>3</xdr:col><xdr:colOff>{0}</xdr:colOff><xdr:row>{1}</xdr:row><xdr:rowOff>{2}</xdr:rowOff></xdr:from>",
+                sb.AppendFormat("<xdr:from><xdr:col>5</xdr:col><xdr:colOff>{0}</xdr:colOff><xdr:row>{1}</xdr:row><xdr:rowOff>{2}</xdr:rowOff></xdr:from>",
                     img.ColOffsetEmu, img.RowIndex0Based, img.RowOffsetEmu);
-                sb.AppendFormat("<xdr:to><xdr:col>3</xdr:col><xdr:colOff>{0}</xdr:colOff><xdr:row>{1}</xdr:row><xdr:rowOff>{2}</xdr:rowOff></xdr:to>",
+                sb.AppendFormat("<xdr:to><xdr:col>5</xdr:col><xdr:colOff>{0}</xdr:colOff><xdr:row>{1}</xdr:row><xdr:rowOff>{2}</xdr:rowOff></xdr:to>",
                     toColOff, img.RowIndex0Based, toRowOff);
 
                 sb.Append("<xdr:pic>");

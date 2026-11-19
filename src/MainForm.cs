@@ -74,6 +74,8 @@ namespace BambuHistoryScreenshot
     {
         private readonly AppConfig _config;
         private readonly BambuUiaScanner _scanner;
+        private readonly BambuCloudClient _cloudClient;
+        private readonly List<PrintHistoryCard> _cloudTasksCache;
         private readonly List<PrintHistoryCard> _allCards;
         private readonly List<PrintHistoryCard> _filteredCards;
         private ScanResult _lastScanResult;
@@ -85,6 +87,7 @@ namespace BambuHistoryScreenshot
         private Button _btnScan;
         private Button _btnCaptureSelected;
         private Button _btnAutoScroll;
+        private Button _btnCloudSync;
         private Button _btnExportExcel;
         private Button _btnOpenFolder;
         private Button _btnDiagnose;
@@ -121,6 +124,8 @@ namespace BambuHistoryScreenshot
         {
             _config = AppConfig.Load();
             _scanner = new BambuUiaScanner();
+            _cloudClient = new BambuCloudClient(_config.CloudRegion);
+            _cloudTasksCache = new List<PrintHistoryCard>();
             _allCards = new List<PrintHistoryCard>();
             _filteredCards = new List<PrintHistoryCard>();
 
@@ -180,27 +185,31 @@ namespace BambuHistoryScreenshot
             actionFlow.WrapContents = false;
             actionFlow.Padding = new Padding(0, 4, 0, 0);
 
-            _btnScan = CreateStyledButton("扫描当前页", Color.White, Color.FromArgb(31, 41, 55), BorderGray, 106);
+            _btnScan = CreateStyledButton("扫描当前页", Color.White, Color.FromArgb(31, 41, 55), BorderGray, 94);
             _btnScan.Click += OnScanClick;
 
-            _btnCaptureSelected = CreateStyledButton("截取勾选卡片", BambuGreen, Color.White, BambuGreen, 122);
+            _btnCaptureSelected = CreateStyledButton("截取勾选卡片", BambuGreen, Color.White, BambuGreen, 110);
             _btnCaptureSelected.Click += OnCaptureSelectedClick;
 
-            _btnAutoScroll = CreateStyledButton("自动滚动批量截图", AccentBlue, Color.White, AccentBlue, 138);
+            _btnAutoScroll = CreateStyledButton("自动滚动批量截图", AccentBlue, Color.White, AccentBlue, 132);
             _btnAutoScroll.Click += OnAutoScrollCaptureClick;
 
-            _btnExportExcel = CreateStyledButton("导出 Excel", Color.FromArgb(29, 111, 66), Color.White, Color.FromArgb(29, 111, 66), 98);
+            _btnCloudSync = CreateStyledButton("同步云端耗材", Color.FromArgb(79, 70, 229), Color.White, Color.FromArgb(79, 70, 229), 110);
+            _btnCloudSync.Click += OnCloudSyncClick;
+
+            _btnExportExcel = CreateStyledButton("导出 Excel", Color.FromArgb(29, 111, 66), Color.White, Color.FromArgb(29, 111, 66), 92);
             _btnExportExcel.Click += OnExportExcelClick;
 
-            _btnOpenFolder = CreateStyledButton("打开保存目录", Color.White, Color.FromArgb(51, 65, 85), BorderGray, 104);
+            _btnOpenFolder = CreateStyledButton("打开目录", Color.White, Color.FromArgb(51, 65, 85), BorderGray, 80);
             _btnOpenFolder.Click += OnOpenFolderClick;
 
-            _btnDiagnose = CreateStyledButton("窗口诊断", Color.White, Color.FromArgb(100, 116, 139), BorderGray, 80);
+            _btnDiagnose = CreateStyledButton("诊断", Color.White, Color.FromArgb(100, 116, 139), BorderGray, 56);
             _btnDiagnose.Click += OnDiagnoseClick;
 
             actionFlow.Controls.Add(_btnScan);
             actionFlow.Controls.Add(_btnCaptureSelected);
             actionFlow.Controls.Add(_btnAutoScroll);
+            actionFlow.Controls.Add(_btnCloudSync);
             actionFlow.Controls.Add(_btnExportExcel);
             actionFlow.Controls.Add(_btnOpenFolder);
             actionFlow.Controls.Add(_btnDiagnose);
@@ -437,13 +446,15 @@ namespace BambuHistoryScreenshot
             colSel.Width = 38;
             _grid.Columns.Add(colSel);
 
-            _grid.Columns.Add(MakeTextCol("ColDate", "打印日期", 125));
-            _grid.Columns.Add(MakeTextCol("ColName", "模型名称", 175));
-            _grid.Columns.Add(MakeTextCol("ColPlate", "盘号", 74));
+            _grid.Columns.Add(MakeTextCol("ColDate", "打印日期", 122));
+            _grid.Columns.Add(MakeTextCol("ColName", "模型名称", 165));
+            _grid.Columns.Add(MakeTextCol("ColPlate", "盘号", 68));
             _grid.Columns.Add(MakeTextCol("ColDuration", "耗时", 54));
-            _grid.Columns.Add(MakeTextCol("ColDevice", "打印机", 130));
-            _grid.Columns.Add(MakeTextCol("ColStatus", "打印状态", 74));
-            _grid.Columns.Add(MakeTextCol("ColFileName", "自动命名 (日期-名称)", 215));
+            _grid.Columns.Add(MakeTextCol("ColDevice", "打印机", 120));
+            _grid.Columns.Add(MakeTextCol("ColStatus", "打印状态", 70));
+            _grid.Columns.Add(MakeTextCol("ColFilamentType", "耗材种类", 88));
+            _grid.Columns.Add(MakeTextCol("ColFilamentWeight", "耗材重量(g)", 82));
+            _grid.Columns.Add(MakeTextCol("ColFileName", "自动命名 (日期-名称)", 200));
             _grid.Columns.Add(MakeTextCol("ColState", "截图状态", 92));
 
             _grid.CurrentCellDirtyStateChanged += delegate
@@ -702,6 +713,7 @@ namespace BambuHistoryScreenshot
             _btnScan.Enabled = !busy;
             _btnCaptureSelected.Enabled = !busy;
             _btnAutoScroll.Enabled = !busy;
+            _btnCloudSync.Enabled = !busy;
             _btnExportExcel.Enabled = !busy;
             _btnDiagnose.Enabled = !busy;
             _progressBar.Visible = busy;
@@ -790,6 +802,8 @@ namespace BambuHistoryScreenshot
                     c.Duration,
                     c.Device,
                     c.Status,
+                    c.FilamentTypes,
+                    c.FormatFilamentWeight(),
                     previewName,
                     c.CaptureState);
                 _grid.Rows[rowIdx].Tag = c;
@@ -815,13 +829,23 @@ namespace BambuHistoryScreenshot
         {
             int selected = 0;
             int saved = 0;
+            int withWeight = 0;
+            double totalWeight = 0;
             for (int i = 0; i < _filteredCards.Count; i++)
             {
                 if (_filteredCards[i].IsSelected) selected++;
                 if (_filteredCards[i].CaptureState == "已保存") saved++;
+                if (_filteredCards[i].HasFilamentWeight)
+                {
+                    withWeight++;
+                    totalWeight += _filteredCards[i].FilamentWeightGrams;
+                }
             }
-            _lblFooterStatus.Text = string.Format("共 {0} 张卡片（筛选显示 {1} 张，已勾选 {2} 张，本次已保存 {3} 张）",
-                _allCards.Count, _filteredCards.Count, selected, saved);
+            string weightPart = withWeight > 0
+                ? string.Format("，耗材总重 {0:0.##}g", Math.Round(totalWeight, 2))
+                : string.Empty;
+            _lblFooterStatus.Text = string.Format("共 {0} 张卡片（筛选显示 {1} 张，已勾选 {2} 张，已保存 {3} 张{4}）",
+                _allCards.Count, _filteredCards.Count, selected, saved, weightPart);
         }
 
         private void SetAllSelection(bool selected)
@@ -982,6 +1006,10 @@ namespace BambuHistoryScreenshot
             if (res != null && res.Cards != null)
             {
                 _allCards.AddRange(res.Cards);
+                if (_cloudTasksCache.Count > 0)
+                {
+                    BambuCloudClient.EnrichCardsWithCloudData(_allCards, _cloudTasksCache);
+                }
             }
 
             ApplyFiltersToGrid();
@@ -1313,6 +1341,10 @@ namespace BambuHistoryScreenshot
             {
                 _allCards.Clear();
                 _allCards.AddRange(collectedAll);
+                if (_cloudTasksCache.Count > 0)
+                {
+                    BambuCloudClient.EnrichCardsWithCloudData(_allCards, _cloudTasksCache);
+                }
                 ApplyFiltersToGrid();
             }
 
@@ -1374,6 +1406,111 @@ namespace BambuHistoryScreenshot
             catch
             {
             }
+        }
+
+        private async void OnCloudSyncClick(object sender, EventArgs e)
+        {
+            if (_isBusy) return;
+            SaveUiToConfig();
+
+            bool forceRelogin = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+            if (!_cloudClient.IsLoggedIn || forceRelogin)
+            {
+                using (CloudLoginForm loginDlg = new CloudLoginForm(_cloudClient, _config))
+                {
+                    if (loginDlg.ShowDialog(this) != DialogResult.OK)
+                    {
+                        return;
+                    }
+                }
+            }
+
+            int fetchLimit = Math.Max(_config.MaxAutoScrollCards, 300);
+            SetBusy(true, "正在从 " + _cloudClient.RegionDisplayName + " 同步打印历史与耗材数据...");
+            AppendLog("开始从拓竹云端同步耗材数据（区域：" + _cloudClient.RegionDisplayName + "）...");
+
+            List<PrintHistoryCard> cloudTasks = null;
+            Exception syncError = null;
+
+            try
+            {
+                cloudTasks = await _cloudClient.FetchPrintHistoryAsync(fetchLimit, delegate(string msg)
+                {
+                    AppendLog("  " + msg);
+                });
+            }
+            catch (UnauthorizedAccessException uaEx)
+            {
+                _cloudClient.Logout();
+                syncError = uaEx;
+            }
+            catch (Exception ex)
+            {
+                syncError = ex;
+            }
+
+            if (syncError != null)
+            {
+                AppendLog("云端同步失败: " + syncError.Message);
+                SetBusy(false, "云端同步失败");
+                MessageBox.Show(this, "同步云端耗材数据失败：\n" + syncError.Message + "\n\n（按住 Shift 点击“同步云端耗材”可切换账号或重新登录）",
+                    "同步失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            _cloudTasksCache.Clear();
+            if (cloudTasks != null)
+            {
+                _cloudTasksCache.AddRange(cloudTasks);
+            }
+
+            string summaryMsg;
+            if (_allCards.Count > 0)
+            {
+                int matched = BambuCloudClient.EnrichCardsWithCloudData(_allCards, _cloudTasksCache);
+                summaryMsg = string.Format("云端同步完成：拉取 {0} 条记录，已为当前列表匹配并填充 {1} / {2} 条耗材种类与重量。",
+                    _cloudTasksCache.Count, matched, _allCards.Count);
+            }
+            else
+            {
+                // Populate directly from cloud tasks and auto-link any existing local PNG screenshots
+                _allCards.AddRange(_cloudTasksCache);
+                int linkedImages = LinkExistingLocalScreenshots(_allCards, _config);
+                summaryMsg = string.Format("云端同步完成：已加载 {0} 条含耗材记录，自动关联本地已有截图 {1} 张（可直接“导出 Excel”）。",
+                    _allCards.Count, linkedImages);
+            }
+
+            ApplyFiltersToGrid();
+            AppendLog(summaryMsg);
+            SetBusy(false, summaryMsg);
+        }
+
+        private static int LinkExistingLocalScreenshots(List<PrintHistoryCard> cards, AppConfig config)
+        {
+            if (cards == null || config == null || string.IsNullOrEmpty(config.OutputFolder) || !Directory.Exists(config.OutputFolder))
+            {
+                return 0;
+            }
+
+            int linked = 0;
+            for (int i = 0; i < cards.Count; i++)
+            {
+                PrintHistoryCard c = cards[i];
+                if (!string.IsNullOrEmpty(c.SavedFilePath) && File.Exists(c.SavedFilePath))
+                {
+                    linked++;
+                    continue;
+                }
+
+                string expected = Path.Combine(config.OutputFolder, FilenameHelper.FormatFileName(c, config.NamingTemplate));
+                if (File.Exists(expected))
+                {
+                    c.SavedFilePath = expected;
+                    c.CaptureState = "已关联本地截图";
+                    linked++;
+                }
+            }
+            return linked;
         }
 
         private async void OnExportExcelClick(object sender, EventArgs e)
