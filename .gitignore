@@ -1,0 +1,16 @@
+# 运行时生成的配置、日志与本地截图
+config.ini
+uia_debug.txt
+screenshots/
+*.zip
+bambu-studio_*.png
+
+# 可执行文件通过 GitHub Releases 分发（如需包含也可移除此行）
+# BambuHistoryScreenshot.exe
+
+# Windows / IDE 临时文件
+Thumbs.db
+Desktop.ini
+.vs/
+bin/
+obj/
