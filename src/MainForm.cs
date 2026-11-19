@@ -85,6 +85,7 @@ namespace BambuHistoryScreenshot
         private Button _btnScan;
         private Button _btnCaptureSelected;
         private Button _btnAutoScroll;
+        private Button _btnExportExcel;
         private Button _btnOpenFolder;
         private Button _btnDiagnose;
 
@@ -185,18 +186,22 @@ namespace BambuHistoryScreenshot
             _btnCaptureSelected = CreateStyledButton("截取勾选卡片", BambuGreen, Color.White, BambuGreen, 122);
             _btnCaptureSelected.Click += OnCaptureSelectedClick;
 
-            _btnAutoScroll = CreateStyledButton("自动滚动批量截图", AccentBlue, Color.White, AccentBlue, 142);
+            _btnAutoScroll = CreateStyledButton("自动滚动批量截图", AccentBlue, Color.White, AccentBlue, 138);
             _btnAutoScroll.Click += OnAutoScrollCaptureClick;
 
-            _btnOpenFolder = CreateStyledButton("打开保存目录", Color.White, Color.FromArgb(51, 65, 85), BorderGray, 110);
+            _btnExportExcel = CreateStyledButton("导出 Excel", Color.FromArgb(29, 111, 66), Color.White, Color.FromArgb(29, 111, 66), 98);
+            _btnExportExcel.Click += OnExportExcelClick;
+
+            _btnOpenFolder = CreateStyledButton("打开保存目录", Color.White, Color.FromArgb(51, 65, 85), BorderGray, 104);
             _btnOpenFolder.Click += OnOpenFolderClick;
 
-            _btnDiagnose = CreateStyledButton("窗口诊断", Color.White, Color.FromArgb(100, 116, 139), BorderGray, 84);
+            _btnDiagnose = CreateStyledButton("窗口诊断", Color.White, Color.FromArgb(100, 116, 139), BorderGray, 80);
             _btnDiagnose.Click += OnDiagnoseClick;
 
             actionFlow.Controls.Add(_btnScan);
             actionFlow.Controls.Add(_btnCaptureSelected);
             actionFlow.Controls.Add(_btnAutoScroll);
+            actionFlow.Controls.Add(_btnExportExcel);
             actionFlow.Controls.Add(_btnOpenFolder);
             actionFlow.Controls.Add(_btnDiagnose);
 
@@ -697,6 +702,7 @@ namespace BambuHistoryScreenshot
             _btnScan.Enabled = !busy;
             _btnCaptureSelected.Enabled = !busy;
             _btnAutoScroll.Enabled = !busy;
+            _btnExportExcel.Enabled = !busy;
             _btnDiagnose.Enabled = !busy;
             _progressBar.Visible = busy;
             if (busy)
@@ -1367,6 +1373,110 @@ namespace BambuHistoryScreenshot
             }
             catch
             {
+            }
+        }
+
+        private async void OnExportExcelClick(object sender, EventArgs e)
+        {
+            if (_isBusy) return;
+            SaveUiToConfig();
+
+            List<PrintHistoryCard> exportCards = new List<PrintHistoryCard>();
+            if (_filteredCards.Count > 0)
+            {
+                exportCards.AddRange(_filteredCards);
+            }
+            else
+            {
+                List<PrintHistoryCard> folderCards = ExcelExporter.LoadCardsFromScreenshotFolder(_config.OutputFolder);
+                if (folderCards.Count > 0)
+                {
+                    DialogResult useFolder = MessageBox.Show(
+                        this,
+                        string.Format("当前列表为空，但检测到保存目录中已有 {0} 张截图文件。\n\n是否直接将保存目录中的截图整理并导出为 Excel？（注：从文件名导入时“打印状态”列将留空；如需完整打印状态，请先点击“扫描当前页”或“自动滚动批量截图”。）", folderCards.Count),
+                        "导出 Excel",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+                    if (useFolder != DialogResult.Yes)
+                    {
+                        return;
+                    }
+                    exportCards.AddRange(folderCards);
+                }
+                else
+                {
+                    MessageBox.Show(this, "当前没有可导出的记录，请先点击“扫描当前页”、“截取勾选卡片”或“自动滚动批量截图”。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+            }
+
+            string targetPath = string.Empty;
+            using (SaveFileDialog dlg = new SaveFileDialog())
+            {
+                dlg.Title = "导出打印历史为 Excel 文件";
+                dlg.Filter = "Excel 工作簿 (*.xlsx)|*.xlsx";
+                dlg.DefaultExt = "xlsx";
+                dlg.AddExtension = true;
+                dlg.FileName = string.Format("拓竹打印历史_{0}.xlsx", DateTime.Now.ToString("yyyyMMdd_HHmm"));
+                if (Directory.Exists(_config.OutputFolder))
+                {
+                    dlg.InitialDirectory = _config.OutputFolder;
+                }
+
+                if (dlg.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+                targetPath = dlg.FileName;
+            }
+
+            SetBusy(true, string.Format("正在生成 Excel 文件（共 {0} 条记录）...", exportCards.Count));
+            AppendLog(string.Format("开始导出 Excel：{0}（共 {1} 条记录）", targetPath, exportCards.Count));
+
+            ExcelExportResult result = null;
+            Exception exportError = null;
+
+            await Task.Run(delegate
+            {
+                try
+                {
+                    result = ExcelExporter.ExportToXlsx(targetPath, exportCards, _config);
+                }
+                catch (Exception ex)
+                {
+                    exportError = ex;
+                }
+            });
+
+            if (exportError != null)
+            {
+                AppendLog("导出 Excel 失败: " + exportError.Message);
+                SetBusy(false, "导出 Excel 失败");
+                MessageBox.Show(this, "导出 Excel 失败：\n" + exportError.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            string okMsg = string.Format("Excel 导出成功：共 {0} 条记录，内嵌 {1} 张截图。",
+                result.TotalRows, result.EmbeddedImageCount);
+            AppendLog(okMsg + " -> " + result.OutputPath);
+            SetBusy(false, okMsg);
+
+            DialogResult openNow = MessageBox.Show(
+                this,
+                string.Format("{0}\n\n文件路径：\n{1}\n\n是否立即用 Excel 打开？", okMsg, result.OutputPath),
+                "导出完成",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+            if (openNow == DialogResult.Yes)
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo(result.OutputPath) { UseShellExecute = true });
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "无法直接打开文件：" + ex.Message, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
 
